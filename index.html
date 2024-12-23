@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 Data Visualization</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        #chart {
+            width: 100%;
+            height: 500px;
+        }
+
+        select {
+            margin: 10px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>COVID-19 Data Visualization</h1>
+    <div>
+        <label for="country-select">Select Country:</label>
+        <select id="country-select">
+            <!-- Country options will be dynamically loaded here -->
+        </select>
+    </div>
+    <div id="chart"></div>
+    <script src="script.js"></script>
+</body>
+
+</html>
