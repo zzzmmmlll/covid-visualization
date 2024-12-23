@@ -43,9 +43,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         function renderChart(country) {
             const countryData = aggregatedData.find(d => d.country === country).data;
 
-            // 设置图表容器宽高
-            const containerWidth = d3.select("#chart-container").node().getBoundingClientRect().width;
-            const width = containerWidth * 0.9; // 容器宽度的 90%
+            // 设置图表宽高
+            const width = 1000; // 固定宽度
             const height = 500; // 固定高度
             const margin = { top: 20, right: 50, bottom: 50, left: 80 };
 
@@ -89,26 +88,34 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .attr("stroke", color)
                     .attr("stroke-width", 2)
                     .attr("d", lineGenerator(key));
+
+                // 为每条折线添加悬停功能
+                svg.selectAll(`.dot-${key}`)
+                    .data(countryData)
+                    .enter()
+                    .append("circle")
+                    .attr("class", `dot-${key}`)
+                    .attr("cx", d => x(d[0]))
+                    .attr("cy", d => y(d[1][key]))
+                    .attr("r", 4)
+                    .attr("fill", color)
+                    .on("mouseover", (event, d) => {
+                        d3.select(".tooltip")
+                            .style("visibility", "visible")
+                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d[0])}<br>${key}: ${d[1][key]}`);
+                    })
+                    .on("mousemove", event => {
+                        d3.select(".tooltip")
+                            .style("top", `${event.pageY - 10}px`)
+                            .style("left", `${event.pageX + 10}px`);
+                    })
+                    .on("mouseout", () => {
+                        d3.select(".tooltip").style("visibility", "hidden");
+                    });
             });
 
             // 提示框
-            const tooltip = d3.select("body").append("div").attr("class", "tooltip");
-            svg.selectAll("circle")
-                .data(countryData)
-                .enter()
-                .append("circle")
-                .attr("cx", d => x(d[0]))
-                .attr("cy", d => y(d[1].Confirmed))
-                .attr("r", 4)
-                .attr("fill", "blue")
-                .on("mouseover", (event, d) => {
-                    tooltip.style("visibility", "visible")
-                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d[0])}<br>Confirmed: ${d[1].Confirmed}`);
-                })
-                .on("mousemove", event => {
-                    tooltip.style("top", `${event.pageY - 10}px`).style("left", `${event.pageX + 10}px`);
-                })
-                .on("mouseout", () => tooltip.style("visibility", "hidden"));
+            d3.select("body").append("div").attr("class", "tooltip");
 
             // 绘制图例
             const legendContainer = d3.select("#legend-container").html("");
