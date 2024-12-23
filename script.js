@@ -1,7 +1,6 @@
-// 使用 D3.js 从 GitHub 仓库加载数据
 d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/heads/master/data/cleaned_covid_19_clean_complete.csv")
     .then(function (data) {
-        // 数据处理：将日期转化为日期对象，其他数值转换为数字
+        // 数据处理：解析日期和数值
         data.forEach(d => {
             d.Date = d3.timeParse("%Y-%m-%d")(d.Date);
             d.Confirmed = +d.Confirmed;
@@ -9,204 +8,119 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             d.Recovered = +d.Recovered;
         });
 
-        // 获取所有国家的列表
-        const countries = [...new Set(data.map(d => d["Country/Region"]))];
+        // 按国家聚合数据
+        const aggregatedData = d3.groups(data, d => d["Country/Region"])
+            .map(([key, values]) => ({
+                country: key,
+                data: d3.rollups(values,
+                    v => ({
+                        Date: v[0].Date, // 日期
+                        Confirmed: d3.sum(v, d => d.Confirmed),
+                        Deaths: d3.sum(v, d => d.Deaths),
+                        Recovered: d3.sum(v, d => d.Recovered)
+                    }),
+                    d => d.Date)
+            }));
 
-        // 填充下拉框
+        // 获取国家列表
+        const countries = aggregatedData.map(d => d.country);
+
+        // 动态填充选择框
         const countrySelect = d3.select("#country-select");
         countries.forEach(country => {
-            countrySelect.append("option")
-                .attr("value", country)
-                .text(country);
+            countrySelect.append("option").attr("value", country).text(country);
         });
 
-        // 默认选择第一个国家并展示数据
-        const selectedCountry = countries[0];
-        renderChart(data, selectedCountry);
+        let selectedCountry = countries[0];
+        renderChart(selectedCountry);
 
-        // 当用户选择新的国家时更新图表
+        // 当用户选择新国家时更新图表
         countrySelect.on("change", function () {
-            const selectedCountry = this.value;
-            renderChart(data, selectedCountry);
+            selectedCountry = this.value;
+            renderChart(selectedCountry);
         });
 
-        // 绘制图表的函数
-        function renderChart(data, country) {
-            // 筛选出选择国家的数据
-            const countryData = data.filter(d => d["Country/Region"] === country);
+        // 动态调整图表大小
+        d3.select(window).on("resize", () => renderChart(selectedCountry));
 
-            // 设置图表的尺寸
-            const width = 900, height = 500;
-            const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+        function renderChart(country) {
+            const countryData = aggregatedData.find(d => d.country === country).data;
 
-            // 创建SVG画布，并将其居中
+            // 动态获取宽度和高度
+            const containerWidth = d3.select("#chart-container").node().getBoundingClientRect().width;
+            const width = containerWidth * 0.9, height = width * 0.5; // 比例 16:9
+            const margin = { top: 50, right: 50, bottom: 50, left: 80 };
+
+            // 清空图表并初始化
             const svg = d3.select("#chart").html("").append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
-            // 设置X轴和Y轴的比例尺
-            const x = d3.scaleTime()
-                .domain(d3.extent(countryData, d => d.Date))
-                .range([0, width]);
-
+            // 设置比例尺
+            const x = d3.scaleTime().domain(d3.extent(countryData, d => d.Date)).range([0, width]);
             const y = d3.scaleLinear()
-                .domain([0, d3.max(countryData, d => Math.max(d.Confirmed, d.Deaths, d.Recovered))])
+                .domain([0, d3.max(countryData, d => Math.max(d[1].Confirmed, d[1].Deaths, d[1].Recovered))])
                 .range([height, 0]);
 
-            // 绘制X轴
-            svg.append("g")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x).ticks(d3.timeMonth));
-
-            // 绘制Y轴
-            svg.append("g")
-                .call(d3.axisLeft(y));
+            // 添加坐标轴
+            svg.append("g").attr("transform", `translate(0,${height})`).call(d3.axisBottom(x).ticks(d3.timeMonth));
+            svg.append("g").call(d3.axisLeft(y));
 
             // 绘制折线
-            const lineConfirmed = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Confirmed));
+            const lineGenerator = key => d3.line()
+                .x(d => x(d[0]))
+                .y(d => y(d[1][key]))
+                .curve(d3.curveMonotoneX);
 
-            const lineDeaths = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Deaths));
+            const lines = [
+                { key: "Confirmed", color: "blue" },
+                { key: "Deaths", color: "red" },
+                { key: "Recovered", color: "green" }
+            ];
 
-            const lineRecovered = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Recovered));
-
-            // 添加折线
-            const lines = svg.selectAll(".line")
-                .data([lineConfirmed, lineDeaths, lineRecovered])
-                .enter().append("path")
-                .attr("class", "line")
-                .attr("fill", "none")
-                .attr("stroke", (d, i) => i === 0 ? "blue" : i === 1 ? "red" : "green")
-                .attr("stroke-width", 2)
-                .attr("d", (d, i) => i === 0 ? lineConfirmed(countryData) :
-                    i === 1 ? lineDeaths(countryData) : lineRecovered(countryData));
-
-            // 添加图例
-            const legend = svg.append("g")
-                .attr("transform", `translate(${width - 150},20)`);
-
-            legend.append("rect")
-                .attr("width", 10)
-                .attr("height", 10)
-                .attr("fill", "blue");
-
-            legend.append("text")
-                .attr("x", 20)
-                .attr("y", 10)
-                .text("Confirmed");
-
-            legend.append("rect")
-                .attr("width", 10)
-                .attr("height", 10)
-                .attr("fill", "red")
-                .attr("y", 20);
-
-            legend.append("text")
-                .attr("x", 20)
-                .attr("y", 30)
-                .text("Deaths");
-
-            legend.append("rect")
-                .attr("width", 10)
-                .attr("height", 10)
-                .attr("fill", "green")
-                .attr("y", 40);
-
-            legend.append("text")
-                .attr("x", 20)
-                .attr("y", 50)
-                .text("Recovered");
-
-            // 定义缩放行为
-            const zoom = d3.zoom()
-                .scaleExtent([1, 10])
-                .on("zoom", zoomed);
-
-            // 应用缩放行为
-            svg.call(zoom);
-
-            // 缩放函数
-            function zoomed(event) {
-                svg.attr("transform", event.transform);
-            }
-
-            // 放大和缩小按钮事件
-            d3.select("#zoom-in").on("click", function () {
-                svg.transition().call(zoom.scaleBy, 1.2);
-            });
-
-            d3.select("#zoom-out").on("click", function () {
-                svg.transition().call(zoom.scaleBy, 0.8);
-            });
-
-
-            // 创建 Tooltip 元素
-            const tooltip = d3.select("body").append("div")
-                .attr("class", "tooltip")
-                .style("position", "absolute")
-                .style("visibility", "hidden")
-                .style("background", "rgba(0,0,0,0.6)")
-                .style("color", "#fff")
-                .style("border-radius", "5px")
-                .style("padding", "10px")
-                .style("font-size", "12px")
-                .style("pointer-events", "none");
-
-            // 绘制数据点
-            svg.selectAll(".dot")
-                .data(countryData)
-                .enter().append("circle")
-                .attr("class", "dot")
-                .attr("cx", d => x(d.Date))
-                .attr("cy", d => y(d.Confirmed))
-                .attr("r", 5)
-                .attr("fill", "blue")
-                .on("mouseover", function (event, d) {
-                    tooltip.style("visibility", "visible")
-                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>Confirmed: ${d.Confirmed}`);
-                })
-                .on("mousemove", function (event) {
-                    tooltip.style("top", (event.pageY + 10) + "px")
-                        .style("left", (event.pageX + 10) + "px");
-                })
-                .on("mouseout", function () {
-                    tooltip.style("visibility", "hidden");
-                });
-        }
-
-        // 创建选择框
-        const filterContainer = d3.select("#filter-container")
-            .append("input")
-            .attr("type", "checkbox")
-            .attr("id", "show-confirmed")
-            .attr("checked", true)
-            .text("Show Confirmed")
-            .on("change", updateChart);
-
-        // 更新图表的函数
-        function updateChart() {
-            const showConfirmed = d3.select("#show-confirmed").property("checked");
-            if (showConfirmed) {
+            lines.forEach(({ key, color }) => {
                 svg.append("path")
-                    .data([countryData])
-                    .attr("class", "line")
+                    .datum(countryData)
                     .attr("fill", "none")
-                    .attr("stroke", "blue")
+                    .attr("stroke", color)
                     .attr("stroke-width", 2)
-                    .attr("d", lineConfirmed);
-            } else {
-                svg.select(".line")
-                    .remove();
-            }
+                    .attr("d", lineGenerator(key))
+                    .attr("class", `line-${key}`);
+            });
+
+            // 添加 tooltip
+            const tooltip = d3.select("body").append("div").attr("class", "tooltip");
+            svg.selectAll("circle")
+                .data(countryData)
+                .enter()
+                .append("circle")
+                .attr("cx", d => x(d[0]))
+                .attr("cy", d => y(d[1].Confirmed))
+                .attr("r", 4)
+                .attr("fill", "blue")
+                .on("mouseover", (event, d) => {
+                    tooltip.style("visibility", "visible")
+                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d[0])}<br>Confirmed: ${d[1].Confirmed}`);
+                })
+                .on("mousemove", event => {
+                    tooltip.style("top", `${event.pageY - 10}px`).style("left", `${event.pageX + 10}px`);
+                })
+                .on("mouseout", () => tooltip.style("visibility", "hidden"));
+
+            // 图例交互
+            const legend = d3.select("#legend-container").html("");
+            lines.forEach(({ key, color }) => {
+                const legendItem = legend.append("div").attr("class", "legend-item");
+                legendItem.append("span").style("background-color", color);
+                legendItem.append("span").text(key);
+                legendItem.on("click", () => {
+                    const line = svg.select(`.line-${key}`);
+                    const isVisible = line.style("display") !== "none";
+                    line.style("display", isVisible ? "none" : "block");
+                });
+            });
         }
     })
-    .catch(function (error) {
-        console.log(error);
-    });
+    .catch(console.error);
