@@ -44,8 +44,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             const countryData = aggregatedData.find(d => d.country === country).data;
 
             // 设置图表宽高
-            const width = 100; // 固定宽度
-            const height = 50; // 固定高度
+            const width = 400; // 固定宽度
+            const height = 200; // 固定高度
             const margin = { top: 20, right: 50, bottom: 50, left: 80 };
 
             // 清空图表并初始化
