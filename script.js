@@ -49,7 +49,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             // 动态获取宽度和高度
             const containerWidth = d3.select("#chart-container").node().getBoundingClientRect().width;
             const width = containerWidth * 0.9, height = width * 0.5; // 比例 16:9
-            const margin = { top: 50, right: 50, bottom: 50, left: 80 };
+            const margin = { top: 20, right: 50, bottom: 50, left: 80 };
 
             // 清空图表并初始化
             const svg = d3.select("#chart").html("").append("svg")
@@ -59,7 +59,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
             // 设置比例尺
-            const x = d3.scaleTime().domain(d3.extent(countryData, d => d.Date)).range([0, width]);
+            const x = d3.scaleTime().domain(d3.extent(countryData, d => d[0])).range([0, width]);
             const y = d3.scaleLinear()
                 .domain([0, d3.max(countryData, d => Math.max(d[1].Confirmed, d[1].Deaths, d[1].Recovered))])
                 .range([height, 0]);
@@ -90,7 +90,17 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .attr("class", `line-${key}`);
             });
 
-            // 添加 tooltip
+            // 限制图表范围，不超出边界
+            svg.selectAll("path").attr("clip-path", "url(#clip)");
+
+            // 添加裁剪区域
+            svg.append("defs").append("clipPath")
+                .attr("id", "clip")
+                .append("rect")
+                .attr("width", width)
+                .attr("height", height);
+
+            // 提示框
             const tooltip = d3.select("body").append("div").attr("class", "tooltip");
             svg.selectAll("circle")
                 .data(countryData)
@@ -109,7 +119,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 })
                 .on("mouseout", () => tooltip.style("visibility", "hidden"));
 
-            // 图例交互
+            // 图例移动到页面顶部
             const legend = d3.select("#legend-container").html("");
             lines.forEach(({ key, color }) => {
                 const legendItem = legend.append("div").attr("class", "legend-item");
