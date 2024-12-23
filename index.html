@@ -9,38 +9,118 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-        }
-
-        #chart {
-            width: 100%;
-            height: 500px;
-        }
-
-        select {
-            margin: 10px;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
         }
 
         h1 {
             text-align: center;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        #controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        select,
+        button {
+            margin: 5px 10px;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #chart-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #chart {
+            width: 90%;
+            max-width: 1200px;
+            height: 500px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tooltip {
+            position: absolute;
+            visibility: hidden;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            margin: 0 10px;
+            font-size: 14px;
+        }
+
+        .legend-item span {
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            display: inline-block;
+            border-radius: 3px;
+        }
+
+        #zoom-controls {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #zoom-controls button {
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+
+        #zoom-controls button:hover {
+            background: #0056b3;
         }
     </style>
 </head>
 
 <body>
     <h1>COVID-19 Data Visualization</h1>
-    <div>
+    <div id="controls">
         <label for="country-select">Select Country:</label>
-        <select id="country-select">
-            <!-- Country options will be dynamically loaded here -->
-        </select>
+        <select id="country-select"></select>
     </div>
-    <div id="chart"></div>
-    <!-- 在 HTML 中添加按钮 -->
+    <div id="chart-container">
+        <div id="chart"></div>
+    </div>
+    <div class="legend" id="legend-container"></div>
     <div id="zoom-controls">
-        <button id="zoom-in">放大</button>
-        <button id="zoom-out">缩小</button>
+        <button id="zoom-in">Zoom In</button>
+        <button id="zoom-out">Zoom Out</button>
     </div>
-
     <script src="script.js"></script>
 </body>
 
