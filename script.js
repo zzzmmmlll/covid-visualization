@@ -44,8 +44,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             const countryData = aggregatedData.find(d => d.country === country).data;
 
             // 设置图表宽高
-            const width = 1000; // 固定宽度
-            const height = 500; // 固定高度
+            const width = 400; // 固定宽度
+            const height = 200; // 固定高度
             const margin = { top: 20, right: 50, bottom: 50, left: 80 };
 
             // 清空图表并初始化
@@ -82,6 +82,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             ];
 
             lines.forEach(({ key, color }) => {
+                // 绘制折线
                 svg.append("path")
                     .datum(countryData)
                     .attr("fill", "none")
@@ -89,7 +90,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .attr("stroke-width", 2)
                     .attr("d", lineGenerator(key));
 
-                // 为每条折线添加悬停功能
+                // 为每条折线添加悬停点
                 svg.selectAll(`.dot-${key}`)
                     .data(countryData)
                     .enter()
@@ -114,7 +115,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     });
             });
 
-            // 提示框
+            // 添加 Tooltip 容器
             d3.select("body").append("div").attr("class", "tooltip");
 
             // 绘制图例
