@@ -1,5 +1,5 @@
 // 使用 D3.js 从 GitHub 仓库加载数据
-d3.csv("https://github.com/zzzmmmlll/covid-visualization/blob/master/data/cleaned_covid_19_clean_complete.csv")
+d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/heads/master/data/cleaned_covid_19_clean_complete.csv")
     .then(function (data) {
         // 数据处理：将日期转化为日期对象，其他数值转换为数字
         data.forEach(d => {
