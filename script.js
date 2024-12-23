@@ -124,33 +124,30 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .attr("y", 50)
                 .text("Recovered");
 
-            // 添加缩放功能
+            // 定义缩放行为
             const zoom = d3.zoom()
-                .scaleExtent([1, 10])  // 设置缩放的最小和最大比例
-                .translateExtent([[0, 0], [width, height]])  // 限制拖动范围
+                .scaleExtent([1, 10])
                 .on("zoom", zoomed);
 
+            // 应用缩放行为
             svg.call(zoom);
 
+            // 缩放函数
             function zoomed(event) {
-                const transform = event.transform;
-                const newX = transform.rescaleX(x);
-                const newY = transform.rescaleY(y);
-
-                svg.selectAll(".line")
-                    .attr("d", function (d, i) {
-                        return i === 0 ? lineConfirmed(countryData) :
-                            i === 1 ? lineDeaths(countryData) : lineRecovered(countryData);
-                    });
-
-                svg.selectAll("g.x-axis")
-                    .call(d3.axisBottom(newX));
-
-                svg.selectAll("g.y-axis")
-                    .call(d3.axisLeft(newY));
+                svg.attr("transform", event.transform);
             }
 
-            // 创建Tooltip
+            // 放大和缩小按钮事件
+            d3.select("#zoom-in").on("click", function () {
+                svg.transition().call(zoom.scaleBy, 1.2);
+            });
+
+            d3.select("#zoom-out").on("click", function () {
+                svg.transition().call(zoom.scaleBy, 0.8);
+            });
+
+
+            // 创建 Tooltip 元素
             const tooltip = d3.select("body").append("div")
                 .attr("class", "tooltip")
                 .style("position", "absolute")
@@ -162,23 +159,22 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .style("font-size", "12px")
                 .style("pointer-events", "none");
 
-            // 给每条折线添加鼠标悬停事件
-            svg.selectAll(".line")
+            // 绘制数据点
+            svg.selectAll(".dot")
+                .data(countryData)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => x(d.Date))
+                .attr("cy", d => y(d.Confirmed))
+                .attr("r", 5)
+                .attr("fill", "blue")
                 .on("mouseover", function (event, d) {
-                    tooltip.style("visibility", "visible");
+                    tooltip.style("visibility", "visible")
+                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>Confirmed: ${d.Confirmed}`);
                 })
-                .on("mousemove", function (event, d) {
+                .on("mousemove", function (event) {
                     tooltip.style("top", (event.pageY + 10) + "px")
-                        .style("left", (event.pageX + 10) + "px")
-                        .text(function (d) {
-                            if (d === lineConfirmed) {
-                                return `Confirmed: ${d.Confirmed}`;
-                            } else if (d === lineDeaths) {
-                                return `Deaths: ${d.Deaths}`;
-                            } else {
-                                return `Recovered: ${d.Recovered}`;
-                            }
-                        });
+                        .style("left", (event.pageX + 10) + "px");
                 })
                 .on("mouseout", function () {
                     tooltip.style("visibility", "hidden");
