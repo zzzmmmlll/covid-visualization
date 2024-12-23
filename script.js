@@ -45,18 +45,14 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
             // 设置图表容器宽高
             const containerWidth = d3.select("#chart-container").node().getBoundingClientRect().width;
-            const width = containerWidth, height = width * 0.5; // 设置比例
+            const width = containerWidth * 0.9; // 容器宽度的 90%
+            const height = 500; // 固定高度
             const margin = { top: 20, right: 50, bottom: 50, left: 80 };
 
             // 清空图表并初始化
             const svg = d3.select("#chart").html("").append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
-                .call(d3.zoom()
-                    .scaleExtent([1, 10]) // 缩放范围
-                    .on("zoom", function (event) {
-                        svg.attr("transform", event.transform);
-                    }))
                 .append("g")
                 .attr("transform", `translate(${margin.left},${margin.top})`);
 
@@ -95,34 +91,6 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .attr("d", lineGenerator(key));
             });
 
-            // 裁剪区域，确保曲线不超出边界
-            svg.append("defs").append("clipPath")
-                .attr("id", "clip")
-                .append("rect")
-                .attr("width", width)
-                .attr("height", height);
-
-            svg.selectAll("path").attr("clip-path", "url(#clip)");
-
-            // 添加图例
-            const legendContainer = d3.select("#legend-container").html("");
-            lines.forEach(({ key, color }) => {
-                const legendItem = legendContainer.append("div")
-                    .attr("class", "legend-item")
-                    .style("display", "flex")
-                    .style("align-items", "center")
-                    .style("margin", "5px");
-
-                legendItem.append("span")
-                    .style("background-color", color)
-                    .style("display", "inline-block")
-                    .style("width", "12px")
-                    .style("height", "12px")
-                    .style("margin-right", "5px");
-
-                legendItem.append("span").text(key);
-            });
-
             // 提示框
             const tooltip = d3.select("body").append("div").attr("class", "tooltip");
             svg.selectAll("circle")
@@ -141,6 +109,19 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     tooltip.style("top", `${event.pageY - 10}px`).style("left", `${event.pageX + 10}px`);
                 })
                 .on("mouseout", () => tooltip.style("visibility", "hidden"));
+
+            // 绘制图例
+            const legendContainer = d3.select("#legend-container").html("");
+            lines.forEach(({ key, color }) => {
+                const legendItem = legendContainer.append("div")
+                    .attr("class", "legend-item");
+
+                legendItem.append("span")
+                    .style("background-color", color)
+                    .style("display", "inline-block");
+
+                legendItem.append("span").text(key);
+            });
         }
     })
     .catch(console.error);

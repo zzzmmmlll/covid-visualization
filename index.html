@@ -22,31 +22,51 @@
 
         #controls {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
             align-items: center;
-            flex-wrap: wrap;
             margin-bottom: 20px;
         }
 
         select {
-            margin: 5px 10px;
+            margin: 10px 0;
             padding: 10px;
             font-size: 16px;
             border-radius: 5px;
             border: 1px solid #ccc;
         }
 
+        #legend-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+
+        .legend-item span {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            margin-right: 5px;
+        }
+
         #chart-container {
             display: flex;
             justify-content: center;
             align-items: center;
-            margin-top: 20px;
+            margin: 20px;
+            overflow: auto;
         }
 
         #chart {
             width: 90%;
             max-width: 1200px;
-            height: 500px;
+            height: 600px;
             background: white;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -63,25 +83,6 @@
             font-size: 12px;
             text-align: center;
             pointer-events: none;
-        }
-
-        #legend-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .legend-item {
-            display: inline-block;
-            margin: 0 10px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-
-        .legend-item span {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            margin-right: 5px;
         }
 
         #zoom-controls {
@@ -111,11 +112,11 @@
     <div id="controls">
         <label for="country-select">Select Country:</label>
         <select id="country-select"></select>
+        <div id="legend-container"></div>
     </div>
     <div id="chart-container">
         <div id="chart"></div>
     </div>
-    <div id="legend-container"></div>
     <div id="zoom-controls">
         <button id="zoom-in">Zoom In</button>
         <button id="zoom-out">Zoom Out</button>
