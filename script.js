@@ -118,6 +118,35 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .attr("stroke", "green")
                 .attr("stroke-width", 2)
                 .attr("d", lineRecovered);
+
+            // 添加鼠标悬停点
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("position", "absolute")
+                .style("visibility", "hidden")
+                .style("background", "rgba(0,0,0,0.6)")
+                .style("color", "#fff")
+                .style("border-radius", "5px")
+                .style("padding", "10px")
+                .style("font-size", "12px");
+
+            svg.selectAll(".dot")
+                .data(countryData)
+                .enter().append("circle")
+                .attr("class", "dot")
+                .attr("cx", d => x(d.Date))
+                .attr("cy", d => y(d.Confirmed))
+                .attr("r", 5)
+                .attr("fill", "blue")
+                .on("mouseover", (event, d) => {
+                    tooltip.style("visibility", "visible")
+                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>Confirmed: ${d.Confirmed}`);
+                })
+                .on("mousemove", event => {
+                    tooltip.style("top", (event.pageY - 10) + "px")
+                        .style("left", (event.pageX + 10) + "px");
+                })
+                .on("mouseout", () => tooltip.style("visibility", "hidden"));
         }
 
         // 封装地图渲染函数
@@ -136,15 +165,34 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
             // 加载地理数据
             d3.json(geoJsonUrl).then(geoData => {
-                // 绘制地图
+                const nestedData = d3.group(data, d => d["Country/Region"]);
+                const latestDate = d3.max(data, d => d.Date);
+
                 svg.append("g")
                     .selectAll("path")
                     .data(geoData.features)
                     .enter()
                     .append("path")
                     .attr("d", path)
-                    .attr("fill", "#ccc")
-                    .attr("stroke", "#333");
+                    .attr("fill", d => {
+                        const countryData = nestedData.get(d.properties.name);
+                        if (countryData) {
+                            const confirmed = countryData.find(c => c.Date.getTime() === latestDate.getTime())?.Confirmed || 0;
+                            return d3.interpolateReds(confirmed / 100000);
+                        }
+                        return "#ccc";
+                    })
+                    .attr("stroke", "#333")
+                    .on("mouseover", (event, d) => {
+                        const countryData = nestedData.get(d.properties.name);
+                        if (countryData) {
+                            const latest = countryData.find(c => c.Date.getTime() === latestDate.getTime());
+                            d3.select("body").append("div")
+                                .attr("class", "tooltip")
+                                .html(`${d.properties.name}<br>Confirmed: ${latest?.Confirmed || 0}<br>Deaths: ${latest?.Deaths || 0}<br>Recovered: ${latest?.Recovered || 0}`);
+                        }
+                    })
+                    .on("mouseout", () => d3.select(".tooltip").remove());
             });
         }
     })
