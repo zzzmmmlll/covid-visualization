@@ -9,26 +9,37 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             d.Recovered = +d.Recovered;
         });
 
-        // 获取所有国家的列表
-        const countries = [...new Set(data.map(d => d["Country/Region"]))];
+        // 获取所有日期的列表，并去重排序
+        const dates = [...new Set(data.map(d => d.Date))].sort(d3.ascending);
 
-        // 填充下拉框
-        const countrySelect = d3.select("#country-select");
-        countries.forEach(country => {
-            countrySelect.append("option")
-                .attr("value", country)
-                .text(country);
+        // 创建时间筛选器
+        const dateSelect = d3.select("#controls").append("select")
+            .attr("id", "date-select")
+            .style("margin-left", "10px");
+
+        // 填充时间筛选器的选项
+        dates.forEach(date => {
+            dateSelect.append("option")
+                .attr("value", date)
+                .text(d3.timeFormat("%Y-%m-%d")(date));
         });
 
         // 默认选择第一个国家并展示数据
+        const countries = [...new Set(data.map(d => d["Country/Region"]))];
         const selectedCountry = countries[0];
         renderChart(selectedCountry); // 默认展示曲线图
-        renderMap(data); // 默认加载地图
+        renderMap(data, dates[0]); // 默认展示地图，时间为第一个日期
 
         // 当用户选择新的国家时更新曲线图
-        countrySelect.on("change", function () {
+        d3.select("#country-select").on("change", function () {
             const selectedCountry = this.value;
             renderChart(selectedCountry);
+        });
+
+        // 当用户选择新的日期时更新地图
+        dateSelect.on("change", function () {
+            const selectedDate = d3.timeParse("%Y-%m-%d")(this.value);
+            renderMap(data, selectedDate);
         });
 
         // 按钮选择器
@@ -37,18 +48,19 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         const chartContainer = d3.select("#chart-container");
         const mapContainer = d3.select("#map-container");
 
-        // 切换视图逻辑（使用 visibility 和 opacity 替代 display）
+        // 切换视图逻辑
         showCurveBtn.on("click", () => {
             chartContainer.style("visibility", "visible").style("opacity", 1);
             mapContainer.style("visibility", "hidden").style("opacity", 0);
-            const selectedCountry = countrySelect.property("value");
+            const selectedCountry = d3.select("#country-select").property("value");
             renderChart(selectedCountry);
         });
 
         showMapBtn.on("click", () => {
             chartContainer.style("visibility", "hidden").style("opacity", 0);
             mapContainer.style("visibility", "visible").style("opacity", 1);
-            renderMap(data);
+            const selectedDate = d3.timeParse("%Y-%m-%d")(d3.select("#date-select").property("value"));
+            renderMap(data, selectedDate);
         });
 
         // 提前创建 Tooltip 容器
@@ -137,7 +149,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         }
 
         // 绘制地图函数
-        function renderMap(data) {
+        function renderMap(data, selectedDate) {
             const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
             const svg = d3.select("#map").html("").append("svg")
@@ -148,9 +160,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             const path = d3.geoPath().projection(projection);
 
             d3.json(geoJsonUrl).then(world => {
-                const latestDate = d3.max(data, d => d.Date);
-                const latestData = data.filter(d => d.Date.getTime() === latestDate.getTime());
-                const groupedData = d3.group(latestData, d => d["Country/Region"]);
+                const dateFilteredData = data.filter(d => d.Date.getTime() === selectedDate.getTime());
+                const groupedData = d3.group(dateFilteredData, d => d["Country/Region"]);
 
                 svg.selectAll("path")
                     .data(world.features)
