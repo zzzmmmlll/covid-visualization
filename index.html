@@ -27,6 +27,29 @@
             margin-bottom: 20px;
         }
 
+        #toggle-buttons {
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        button.inactive {
+            background-color: #ccc;
+            color: black;
+        }
+
         select {
             margin: 10px 0;
             padding: 10px;
@@ -55,12 +78,18 @@
             margin-right: 5px;
         }
 
-        #chart-container {
-            display: flex;
+        #chart-container,
+        #map-container {
+            display: none;
             justify-content: center;
             align-items: center;
             margin: 20px;
             overflow: auto;
+        }
+
+        #chart-container.active,
+        #map-container.active {
+            display: flex;
         }
 
         #chart {
@@ -71,6 +100,15 @@
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
+        }
+
+        #map {
+            width: 90%;
+            max-width: 1200px;
+            height: 600px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .tooltip {
@@ -90,13 +128,27 @@
 <body>
     <h1>COVID-19 Data Visualization</h1>
     <div id="controls">
+        <!-- 切换按钮 -->
+        <div id="toggle-buttons">
+            <button id="show-curve" class="active">Show Curve</button>
+            <button id="show-map" class="inactive">Show Map</button>
+        </div>
+        <!-- 国家选择和图例 -->
         <label for="country-select">Select Country:</label>
         <select id="country-select"></select>
         <div id="legend-container"></div>
     </div>
-    <div id="chart-container">
+
+    <!-- 曲线变化图容器 -->
+    <div id="chart-container" class="active">
         <div id="chart"></div>
     </div>
+
+    <!-- 世界地图容器 -->
+    <div id="map-container">
+        <svg id="map"></svg>
+    </div>
+
     <script src="script.js"></script>
 </body>
 
