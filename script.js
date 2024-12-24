@@ -8,6 +8,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             d.Deaths = +d.Deaths;
             d.Recovered = +d.Recovered;
         });
+
         // 获取所有国家的列表
         const countries = [...new Set(data.map(d => d["Country/Region"]))];
 
@@ -21,15 +22,15 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
         // 默认选择第一个国家并展示数据
         const selectedCountry = countries[0];
-        renderCurve(data, selectedCountry);
+        renderChart(data, selectedCountry); // 默认展示曲线图
 
-        // 当用户选择新的国家时更新图表
+        // 当用户选择新的国家时更新曲线图
         countrySelect.on("change", function () {
             const selectedCountry = this.value;
-            renderCurve(data, selectedCountry); // 切换国家时更新曲线图
+            renderChart(data, selectedCountry);
         });
 
-        // 选择切换按钮和容器
+        // 按钮选择器
         const showCurveBtn = d3.select("#show-curve");
         const showMapBtn = d3.select("#show-map");
         const chartContainer = d3.select("#chart-container");
@@ -37,56 +38,27 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
         // 切换视图逻辑
         showCurveBtn.on("click", () => {
-            chartContainer.classed("active", true);
-            mapContainer.classed("active", false);
-            showCurveBtn.classed("active", true).classed("inactive", false);
-            showMapBtn.classed("active", false).classed("inactive", true);
+            chartContainer.style("display", "block");
+            mapContainer.style("display", "none");
+            renderChart(data, selectedCountry);
         });
 
         showMapBtn.on("click", () => {
-            chartContainer.classed("active", false);
-            mapContainer.classed("active", true);
-            showCurveBtn.classed("active", false).classed("inactive", true);
-            showMapBtn.classed("active", true).classed("inactive", false);
-
-            // 渲染地图（切换到地图视图时触发）
+            chartContainer.style("display", "none");
+            mapContainer.style("display", "block");
             renderMap(data);
         });
-        // 获取所有日期并排序
-        const dates = [...new Set(data.map(d => d.Date))].sort(d3.ascending);
 
-        // 在页面中添加时间选择器
-        const timeSelect = d3.select("#time-select");
-        dates.forEach(date => {
-            timeSelect.append("option")
-                .attr("value", date)
-                .text(d3.timeFormat("%Y-%m-%d")(date));
-        });
-
-        // 默认选择最后一个日期（最新数据）
-        const defaultDate = dates[dates.length - 1];
-        timeSelect.property("value", defaultDate);
-
-        // 初始化地图和曲线图
-        renderCurve(data, "Afghanistan"); // 默认国家
-        renderMap(data, defaultDate); // 默认显示最新时间的地图
-
-        // 当时间选择器改变时更新地图
-        timeSelect.on("change", function () {
-            const selectedDate = d3.timeParse("%Y-%m-%d")(this.value);
-            renderMap(data, selectedDate);
-        });
-
-        // 封装曲线图渲染函数
-        function renderCurve(data, country) {
+        // 绘制曲线图函数
+        function renderChart(data, country) {
             // 筛选出选择国家的数据
             const countryData = data.filter(d => d["Country/Region"] === country);
 
             // 设置图表的尺寸
             const width = 900, height = 500;
-            const margin = { top: 30, right: 30, bottom: 30, left: 50 };
+            const margin = { top: 20, right: 30, bottom: 50, left: 60 };
 
-            // 清空图表容器并创建SVG
+            // 创建SVG画布
             const svg = d3.select("#chart").html("").append("svg")
                 .attr("width", width + margin.left + margin.right)
                 .attr("height", height + margin.top + margin.bottom)
@@ -105,115 +77,100 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             // 绘制X轴和Y轴
             svg.append("g")
                 .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(x));
+                .call(d3.axisBottom(x).ticks(d3.timeMonth));
             svg.append("g")
                 .call(d3.axisLeft(y));
 
             // 绘制折线
-            const lines = [
-                { label: "Confirmed", color: "blue", accessor: d => d.Confirmed },
-                { label: "Deaths", color: "red", accessor: d => d.Deaths },
-                { label: "Recovered", color: "green", accessor: d => d.Recovered },
-            ];
+            const lineConfirmed = d3.line()
+                .x(d => x(d.Date))
+                .y(d => y(d.Confirmed));
 
-            const tooltip = d3.select("body").append("div")
-                .attr("class", "tooltip")
-                .style("position", "absolute")
-                .style("visibility", "hidden")
-                .style("background", "rgba(0,0,0,0.6)")
-                .style("color", "#fff")
-                .style("border-radius", "5px")
-                .style("padding", "10px")
-                .style("font-size", "12px");
+            const lineDeaths = d3.line()
+                .x(d => x(d.Date))
+                .y(d => y(d.Deaths));
 
-            lines.forEach(line => {
-                const lineGenerator = d3.line()
-                    .x(d => x(d.Date))
-                    .y(d => y(line.accessor(d)));
+            const lineRecovered = d3.line()
+                .x(d => x(d.Date))
+                .y(d => y(d.Recovered));
 
-                svg.append("path")
-                    .datum(countryData)
-                    .attr("fill", "none")
-                    .attr("stroke", line.color)
-                    .attr("stroke-width", 2)
-                    .attr("d", lineGenerator);
+            // 添加折线
+            svg.append("path")
+                .datum(countryData)
+                .attr("fill", "none")
+                .attr("stroke", "blue")
+                .attr("stroke-width", 2)
+                .attr("d", lineConfirmed);
 
-                // 添加悬停点
-                svg.selectAll(`.dot-${line.label}`)
-                    .data(countryData)
-                    .enter().append("circle")
-                    .attr("class", `dot-${line.label}`)
-                    .attr("cx", d => x(d.Date))
-                    .attr("cy", d => y(line.accessor(d)))
-                    .attr("r", 5)
-                    .attr("fill", line.color)
-                    .on("mouseover", (event, d) => {
-                        tooltip.style("visibility", "visible")
-                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>${line.label}: ${line.accessor(d)}`);
-                    })
-                    .on("mousemove", event => {
-                        tooltip.style("top", (event.pageY - 10) + "px")
-                            .style("left", (event.pageX + 10) + "px");
-                    })
-                    .on("mouseout", () => tooltip.style("visibility", "hidden"));
-            });
+            svg.append("path")
+                .datum(countryData)
+                .attr("fill", "none")
+                .attr("stroke", "red")
+                .attr("stroke-width", 2)
+                .attr("d", lineDeaths);
+
+            svg.append("path")
+                .datum(countryData)
+                .attr("fill", "none")
+                .attr("stroke", "green")
+                .attr("stroke-width", 2)
+                .attr("d", lineRecovered);
         }
 
-        // 封装地图渲染函数
-        function renderMap(data, selectedDate) {
+        // 绘制地图函数
+        function renderMap(data) {
             const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
+            // 创建SVG画布
             const svg = d3.select("#map").html("").append("svg")
                 .attr("width", 900)
                 .attr("height", 500);
 
-            const projection = d3.geoNaturalEarth1()
-                .scale(150)
-                .translate([450, 250]);
-
+            const projection = d3.geoNaturalEarth1().scale(150).translate([450, 250]);
             const path = d3.geoPath().projection(projection);
 
-            // 加载地理数据
-            d3.json(geoJsonUrl).then(geoData => {
-                const nestedData = d3.group(data.filter(d => d.Date.getTime() === selectedDate.getTime()), d => d["Country/Region"]);
-
+            d3.json(geoJsonUrl).then(world => {
                 svg.append("g")
                     .selectAll("path")
-                    .data(geoData.features)
+                    .data(world.features)
                     .enter()
                     .append("path")
                     .attr("d", path)
+                    .attr("fill", "#ccc")
+                    .attr("stroke", "#333");
+
+                // 显示数据（仅显示最新日期的数据）
+                const latestDate = d3.max(data, d => d.Date);
+                const latestData = data.filter(d => d.Date.getTime() === latestDate.getTime());
+                const groupedData = d3.group(latestData, d => d["Country/Region"]);
+
+                svg.selectAll("path")
                     .attr("fill", d => {
-                        const countryData = nestedData.get(d.properties.name);
-                        if (countryData) {
-                            const confirmed = countryData[0]?.Confirmed || 0;
-                            return d3.interpolateReds(confirmed / 100000); // 根据确诊人数设置颜色深浅
-                        }
-                        return "#ccc";
+                        const countryData = groupedData.get(d.properties.name);
+                        return countryData ? d3.interpolateReds(countryData[0].Confirmed / 1000000) : "#ccc";
                     })
-                    .attr("stroke", "#333")
                     .on("mouseover", (event, d) => {
-                        const countryData = nestedData.get(d.properties.name);
+                        const countryData = groupedData.get(d.properties.name);
                         if (countryData) {
-                            const data = countryData[0];
-                            d3.select(".tooltip")
+                            const tooltip = d3.select("body").append("div")
+                                .attr("class", "tooltip")
+                                .style("position", "absolute")
                                 .style("visibility", "visible")
-                                .html(`${d.properties.name}<br>Confirmed: ${data.Confirmed}<br>Deaths: ${data.Deaths}<br>Recovered: ${data.Recovered}`);
+                                .style("background", "rgba(0,0,0,0.7)")
+                                .style("color", "#fff")
+                                .style("padding", "10px")
+                                .style("border-radius", "5px")
+                                .style("font-size", "12px");
+
+                            tooltip.html(`${d.properties.name}<br>Confirmed: ${countryData[0].Confirmed}<br>Deaths: ${countryData[0].Deaths}<br>Recovered: ${countryData[0].Recovered}`)
+                                .style("top", (event.pageY + 10) + "px")
+                                .style("left", (event.pageX + 10) + "px");
                         }
-                        d3.select(event.target).attr("stroke", "yellow").attr("stroke-width", 2); // 高亮
                     })
-                    .on("mousemove", event => {
-                        d3.select(".tooltip")
-                            .style("top", (event.pageY - 10) + "px")
-                            .style("left", (event.pageX + 10) + "px");
-                    })
-                    .on("mouseout", (event, d) => {
-                        d3.select(".tooltip").style("visibility", "hidden");
-                        d3.select(event.target).attr("stroke", "#333").attr("stroke-width", 1); // 恢复原样
-                    });
+                    .on("mouseout", () => d3.select(".tooltip").remove());
             });
         }
     })
     .catch(function (error) {
-        console.error("Error loading the data:", error);
+        console.log(error);
     });
