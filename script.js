@@ -140,61 +140,62 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
                 legendItem.append("span").text(key);
             });
+        }
 
-            // 绘制地图函数
-            function renderMap(data) {
-                const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+        // 绘制地图函数
+        function renderMap(data) {
+            const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
-                // 创建SVG画布
-                const svg = d3.select("#map").html("").append("svg")
-                    .attr("width", 900)
-                    .attr("height", 500);
+            // 创建SVG画布
+            const svg = d3.select("#map").html("").append("svg")
+                .attr("width", 900)
+                .attr("height", 500);
 
-                const projection = d3.geoNaturalEarth1().scale(150).translate([450, 250]);
-                const path = d3.geoPath().projection(projection);
+            const projection = d3.geoNaturalEarth1().scale(150).translate([450, 250]);
+            const path = d3.geoPath().projection(projection);
 
-                d3.json(geoJsonUrl).then(world => {
-                    svg.append("g")
-                        .selectAll("path")
-                        .data(world.features)
-                        .enter()
-                        .append("path")
-                        .attr("d", path)
-                        .attr("fill", "#ccc")
-                        .attr("stroke", "#333");
+            d3.json(geoJsonUrl).then(world => {
+                svg.append("g")
+                    .selectAll("path")
+                    .data(world.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .attr("fill", "#ccc")
+                    .attr("stroke", "#333");
 
-                    // 显示数据（仅显示最新日期的数据）
-                    const latestDate = d3.max(data, d => d.Date);
-                    const latestData = data.filter(d => d.Date.getTime() === latestDate.getTime());
-                    const groupedData = d3.group(latestData, d => d["Country/Region"]);
+                // 显示数据（仅显示最新日期的数据）
+                const latestDate = d3.max(data, d => d.Date);
+                const latestData = data.filter(d => d.Date.getTime() === latestDate.getTime());
+                const groupedData = d3.group(latestData, d => d["Country/Region"]);
 
-                    svg.selectAll("path")
-                        .attr("fill", d => {
-                            const countryData = groupedData.get(d.properties.name);
-                            return countryData ? d3.interpolateReds(countryData[0].Confirmed / 1000000) : "#ccc";
-                        })
-                        .on("mouseover", (event, d) => {
-                            const countryData = groupedData.get(d.properties.name);
-                            if (countryData) {
-                                const tooltip = d3.select("body").append("div")
-                                    .attr("class", "tooltip")
-                                    .style("position", "absolute")
-                                    .style("visibility", "visible")
-                                    .style("background", "rgba(0,0,0,0.7)")
-                                    .style("color", "#fff")
-                                    .style("padding", "10px")
-                                    .style("border-radius", "5px")
-                                    .style("font-size", "12px");
+                svg.selectAll("path")
+                    .attr("fill", d => {
+                        const countryData = groupedData.get(d.properties.name);
+                        return countryData ? d3.interpolateReds(countryData[0].Confirmed / 1000000) : "#ccc";
+                    })
+                    .on("mouseover", (event, d) => {
+                        const countryData = groupedData.get(d.properties.name);
+                        if (countryData) {
+                            const tooltip = d3.select("body").append("div")
+                                .attr("class", "tooltip")
+                                .style("position", "absolute")
+                                .style("visibility", "visible")
+                                .style("background", "rgba(0,0,0,0.7)")
+                                .style("color", "#fff")
+                                .style("padding", "10px")
+                                .style("border-radius", "5px")
+                                .style("font-size", "12px");
 
-                                tooltip.html(`${d.properties.name}<br>Confirmed: ${countryData[0].Confirmed}<br>Deaths: ${countryData[0].Deaths}<br>Recovered: ${countryData[0].Recovered}`)
-                                    .style("top", (event.pageY + 10) + "px")
-                                    .style("left", (event.pageX + 10) + "px");
-                            }
-                        })
-                        .on("mouseout", () => d3.select(".tooltip").remove());
-                });
-            }
-        })
+                            tooltip.html(`${d.properties.name}<br>Confirmed: ${countryData[0].Confirmed}<br>Deaths: ${countryData[0].Deaths}<br>Recovered: ${countryData[0].Recovered}`)
+                                .style("top", (event.pageY + 10) + "px")
+                                .style("left", (event.pageX + 10) + "px");
+                        }
+                    })
+                    .on("mouseout", () => d3.select(".tooltip").remove());
+            });
+        }
+    })
     .catch(function (error) {
         console.log(error);
     });
