@@ -8,7 +8,50 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             d.Deaths = +d.Deaths;
             d.Recovered = +d.Recovered;
         });
+        // 获取所有国家的列表
+        const countries = [...new Set(data.map(d => d["Country/Region"]))];
 
+        // 填充下拉框
+        const countrySelect = d3.select("#country-select");
+        countries.forEach(country => {
+            countrySelect.append("option")
+                .attr("value", country)
+                .text(country);
+        });
+
+        // 默认选择第一个国家并展示数据
+        const selectedCountry = countries[0];
+        renderCurve(data, selectedCountry);
+
+        // 当用户选择新的国家时更新图表
+        countrySelect.on("change", function () {
+            const selectedCountry = this.value;
+            renderCurve(data, selectedCountry); // 切换国家时更新曲线图
+        });
+
+        // 选择切换按钮和容器
+        const showCurveBtn = d3.select("#show-curve");
+        const showMapBtn = d3.select("#show-map");
+        const chartContainer = d3.select("#chart-container");
+        const mapContainer = d3.select("#map-container");
+
+        // 切换视图逻辑
+        showCurveBtn.on("click", () => {
+            chartContainer.classed("active", true);
+            mapContainer.classed("active", false);
+            showCurveBtn.classed("active", true).classed("inactive", false);
+            showMapBtn.classed("active", false).classed("inactive", true);
+        });
+
+        showMapBtn.on("click", () => {
+            chartContainer.classed("active", false);
+            mapContainer.classed("active", true);
+            showCurveBtn.classed("active", false).classed("inactive", true);
+            showMapBtn.classed("active", true).classed("inactive", false);
+
+            // 渲染地图（切换到地图视图时触发）
+            renderMap(data);
+        });
         // 获取所有日期并排序
         const dates = [...new Set(data.map(d => d.Date))].sort(d3.ascending);
 
