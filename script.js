@@ -57,7 +57,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
             // 设置图表的尺寸
             const width = 900, height = 500;
-            const margin = { top: 20, right: 30, bottom: 50, left: 60 };
+            const margin = { top: 10, right: 115, bottom: 10, left: 10 };
 
             // 创建SVG画布，并将其居中
             const svg = d3.select("#chart").html("").append("svg")
