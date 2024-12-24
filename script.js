@@ -87,39 +87,12 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .call(d3.axisLeft(y));
 
             // 绘制折线
-            const lineConfirmed = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Confirmed));
-            const lineDeaths = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Deaths));
-            const lineRecovered = d3.line()
-                .x(d => x(d.Date))
-                .y(d => y(d.Recovered));
+            const lines = [
+                { label: "Confirmed", color: "blue", accessor: d => d.Confirmed },
+                { label: "Deaths", color: "red", accessor: d => d.Deaths },
+                { label: "Recovered", color: "green", accessor: d => d.Recovered },
+            ];
 
-            // 添加折线
-            svg.append("path")
-                .datum(countryData)
-                .attr("fill", "none")
-                .attr("stroke", "blue")
-                .attr("stroke-width", 2)
-                .attr("d", lineConfirmed);
-
-            svg.append("path")
-                .datum(countryData)
-                .attr("fill", "none")
-                .attr("stroke", "red")
-                .attr("stroke-width", 2)
-                .attr("d", lineDeaths);
-
-            svg.append("path")
-                .datum(countryData)
-                .attr("fill", "none")
-                .attr("stroke", "green")
-                .attr("stroke-width", 2)
-                .attr("d", lineRecovered);
-
-            // 添加鼠标悬停点
             const tooltip = d3.select("body").append("div")
                 .attr("class", "tooltip")
                 .style("position", "absolute")
@@ -130,23 +103,37 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .style("padding", "10px")
                 .style("font-size", "12px");
 
-            svg.selectAll(".dot")
-                .data(countryData)
-                .enter().append("circle")
-                .attr("class", "dot")
-                .attr("cx", d => x(d.Date))
-                .attr("cy", d => y(d.Confirmed))
-                .attr("r", 5)
-                .attr("fill", "blue")
-                .on("mouseover", (event, d) => {
-                    tooltip.style("visibility", "visible")
-                        .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>Confirmed: ${d.Confirmed}`);
-                })
-                .on("mousemove", event => {
-                    tooltip.style("top", (event.pageY - 10) + "px")
-                        .style("left", (event.pageX + 10) + "px");
-                })
-                .on("mouseout", () => tooltip.style("visibility", "hidden"));
+            lines.forEach(line => {
+                const lineGenerator = d3.line()
+                    .x(d => x(d.Date))
+                    .y(d => y(line.accessor(d)));
+
+                svg.append("path")
+                    .datum(countryData)
+                    .attr("fill", "none")
+                    .attr("stroke", line.color)
+                    .attr("stroke-width", 2)
+                    .attr("d", lineGenerator);
+
+                // 添加悬停点
+                svg.selectAll(`.dot-${line.label}`)
+                    .data(countryData)
+                    .enter().append("circle")
+                    .attr("class", `dot-${line.label}`)
+                    .attr("cx", d => x(d.Date))
+                    .attr("cy", d => y(line.accessor(d)))
+                    .attr("r", 5)
+                    .attr("fill", line.color)
+                    .on("mouseover", (event, d) => {
+                        tooltip.style("visibility", "visible")
+                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>${line.label}: ${line.accessor(d)}`);
+                    })
+                    .on("mousemove", event => {
+                        tooltip.style("top", (event.pageY - 10) + "px")
+                            .style("left", (event.pageX + 10) + "px");
+                    })
+                    .on("mouseout", () => tooltip.style("visibility", "hidden"));
+            });
         }
 
         // 封装地图渲染函数
@@ -174,14 +161,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .enter()
                     .append("path")
                     .attr("d", path)
-                    .attr("fill", d => {
-                        const countryData = nestedData.get(d.properties.name);
-                        if (countryData) {
-                            const confirmed = countryData.find(c => c.Date.getTime() === latestDate.getTime())?.Confirmed || 0;
-                            return d3.interpolateReds(confirmed / 100000);
-                        }
-                        return "#ccc";
-                    })
+                    .attr("fill", "#ccc")
                     .attr("stroke", "#333")
                     .on("mouseover", (event, d) => {
                         const countryData = nestedData.get(d.properties.name);
@@ -189,7 +169,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                             const latest = countryData.find(c => c.Date.getTime() === latestDate.getTime());
                             d3.select("body").append("div")
                                 .attr("class", "tooltip")
-                                .html(`${d.properties.name}<br>Confirmed: ${latest?.Confirmed || 0}<br>Deaths: ${latest?.Deaths || 0}<br>Recovered: ${latest?.Recovered || 0}`);
+                                .html(`${d.properties.name}<br>Confirmed: ${latest?.Confirmed || 0}<br>Deaths: ${latest?.Deaths || 0}<br>Recovered: ${latest?.Recovered || 0}`)
+                                .style("visibility", "visible");
                         }
                     })
                     .on("mouseout", () => d3.select(".tooltip").remove());
