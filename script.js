@@ -29,6 +29,26 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             const selectedCountry = this.value;
             renderChart(data, selectedCountry);
         });
+        // 选择切换按钮和容器
+        const showCurveBtn = d3.select("#show-curve");
+        const showMapBtn = d3.select("#show-map");
+        const chartContainer = d3.select("#chart-container");
+        const mapContainer = d3.select("#map-container");
+
+        // 切换视图逻辑
+        showCurveBtn.on("click", () => {
+            chartContainer.classed("active", true);
+            mapContainer.classed("active", false);
+            showCurveBtn.classed("active", true).classed("inactive", false);
+            showMapBtn.classed("active", false).classed("inactive", true);
+        });
+
+        showMapBtn.on("click", () => {
+            chartContainer.classed("active", false);
+            mapContainer.classed("active", true);
+            showCurveBtn.classed("active", false).classed("inactive", true);
+            showMapBtn.classed("active", true).classed("inactive", false);
+        });
 
         // 绘制图表的函数
         function renderChart(data, country) {
@@ -180,6 +200,49 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     tooltip.style("visibility", "hidden");
                 });
         }
+        function renderMap() {
+            const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
+            const covidDataUrl = "https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/heads/master/data/cleaned_covid_19_clean_complete.csv";
+
+            const svg = d3.select("#map");
+            const width = 1200;
+            const height = 600;
+            const projection = d3.geoNaturalEarth1().scale(150).translate([width / 2, height / 2]);
+            const path = d3.geoPath().projection(projection);
+
+            Promise.all([d3.json(geoJsonUrl), d3.csv(covidDataUrl)]).then(([geoData, covidData]) => {
+                covidData.forEach(d => {
+                    d.Date = d3.timeParse("%Y-%m-%d")(d.Date);
+                    d.Confirmed = +d.Confirmed;
+                    d.Deaths = +d.Deaths;
+                    d.Recovered = +d.Recovered;
+                });
+
+                const nestedData = d3.group(covidData, d => d.Date);
+                const dates = Array.from(nestedData.keys()).sort(d3.ascending);
+
+                svg.append("g")
+                    .selectAll("path")
+                    .data(geoData.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .attr("fill", "#ccc")
+                    .attr("stroke", "#333");
+
+                // 示例更新地图数据
+                function updateMap(selectedDate) {
+                    console.log("Updating map for date:", selectedDate);
+                }
+
+                // 初始化
+                updateMap(dates[0]);
+            });
+        }
+
+        // 初始化渲染
+        renderCurve();
+        renderMap();
 
         // 创建选择框
         const filterContainer = d3.select("#filter-container")
