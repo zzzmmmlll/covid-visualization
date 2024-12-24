@@ -9,49 +9,29 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             d.Recovered = +d.Recovered;
         });
 
-        // 获取所有国家的列表
-        const countries = [...new Set(data.map(d => d["Country/Region"]))];
+        // 获取所有日期并排序
+        const dates = [...new Set(data.map(d => d.Date))].sort(d3.ascending);
 
-        // 填充下拉框
-        const countrySelect = d3.select("#country-select");
-        countries.forEach(country => {
-            countrySelect.append("option")
-                .attr("value", country)
-                .text(country);
+        // 在页面中添加时间选择器
+        const timeSelect = d3.select("#time-select");
+        dates.forEach(date => {
+            timeSelect.append("option")
+                .attr("value", date)
+                .text(d3.timeFormat("%Y-%m-%d")(date));
         });
 
-        // 默认选择第一个国家并展示数据
-        const selectedCountry = countries[0];
-        renderCurve(data, selectedCountry);
+        // 默认选择最后一个日期（最新数据）
+        const defaultDate = dates[dates.length - 1];
+        timeSelect.property("value", defaultDate);
 
-        // 当用户选择新的国家时更新图表
-        countrySelect.on("change", function () {
-            const selectedCountry = this.value;
-            renderCurve(data, selectedCountry); // 切换国家时更新曲线图
-        });
+        // 初始化地图和曲线图
+        renderCurve(data, "Afghanistan"); // 默认国家
+        renderMap(data, defaultDate); // 默认显示最新时间的地图
 
-        // 选择切换按钮和容器
-        const showCurveBtn = d3.select("#show-curve");
-        const showMapBtn = d3.select("#show-map");
-        const chartContainer = d3.select("#chart-container");
-        const mapContainer = d3.select("#map-container");
-
-        // 切换视图逻辑
-        showCurveBtn.on("click", () => {
-            chartContainer.classed("active", true);
-            mapContainer.classed("active", false);
-            showCurveBtn.classed("active", true).classed("inactive", false);
-            showMapBtn.classed("active", false).classed("inactive", true);
-        });
-
-        showMapBtn.on("click", () => {
-            chartContainer.classed("active", false);
-            mapContainer.classed("active", true);
-            showCurveBtn.classed("active", false).classed("inactive", true);
-            showMapBtn.classed("active", true).classed("inactive", false);
-
-            // 渲染地图（切换到地图视图时触发）
-            renderMap(data);
+        // 当时间选择器改变时更新地图
+        timeSelect.on("change", function () {
+            const selectedDate = d3.timeParse("%Y-%m-%d")(this.value);
+            renderMap(data, selectedDate);
         });
 
         // 封装曲线图渲染函数
@@ -137,7 +117,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         }
 
         // 封装地图渲染函数
-        function renderMap(data) {
+        function renderMap(data, selectedDate) {
             const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
             const svg = d3.select("#map").html("").append("svg")
@@ -152,8 +132,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
             // 加载地理数据
             d3.json(geoJsonUrl).then(geoData => {
-                const nestedData = d3.group(data, d => d["Country/Region"]);
-                const latestDate = d3.max(data, d => d.Date);
+                const nestedData = d3.group(data.filter(d => d.Date.getTime() === selectedDate.getTime()), d => d["Country/Region"]);
 
                 svg.append("g")
                     .selectAll("path")
@@ -161,19 +140,34 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                     .enter()
                     .append("path")
                     .attr("d", path)
-                    .attr("fill", "#ccc")
+                    .attr("fill", d => {
+                        const countryData = nestedData.get(d.properties.name);
+                        if (countryData) {
+                            const confirmed = countryData[0]?.Confirmed || 0;
+                            return d3.interpolateReds(confirmed / 100000); // 根据确诊人数设置颜色深浅
+                        }
+                        return "#ccc";
+                    })
                     .attr("stroke", "#333")
                     .on("mouseover", (event, d) => {
                         const countryData = nestedData.get(d.properties.name);
                         if (countryData) {
-                            const latest = countryData.find(c => c.Date.getTime() === latestDate.getTime());
-                            d3.select("body").append("div")
-                                .attr("class", "tooltip")
-                                .html(`${d.properties.name}<br>Confirmed: ${latest?.Confirmed || 0}<br>Deaths: ${latest?.Deaths || 0}<br>Recovered: ${latest?.Recovered || 0}`)
-                                .style("visibility", "visible");
+                            const data = countryData[0];
+                            d3.select(".tooltip")
+                                .style("visibility", "visible")
+                                .html(`${d.properties.name}<br>Confirmed: ${data.Confirmed}<br>Deaths: ${data.Deaths}<br>Recovered: ${data.Recovered}`);
                         }
+                        d3.select(event.target).attr("stroke", "yellow").attr("stroke-width", 2); // 高亮
                     })
-                    .on("mouseout", () => d3.select(".tooltip").remove());
+                    .on("mousemove", event => {
+                        d3.select(".tooltip")
+                            .style("top", (event.pageY - 10) + "px")
+                            .style("left", (event.pageX + 10) + "px");
+                    })
+                    .on("mouseout", (event, d) => {
+                        d3.select(".tooltip").style("visibility", "hidden");
+                        d3.select(event.target).attr("stroke", "#333").attr("stroke-width", 1); // 恢复原样
+                    });
             });
         }
     })
