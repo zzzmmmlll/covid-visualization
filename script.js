@@ -22,12 +22,13 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
         // 默认选择第一个国家并展示数据
         const selectedCountry = countries[0];
-        renderChart(data, selectedCountry); // 默认展示曲线图
+        renderChart(selectedCountry); // 默认展示曲线图
+        renderMap(data); // 默认加载地图
 
         // 当用户选择新的国家时更新曲线图
         countrySelect.on("change", function () {
             const selectedCountry = this.value;
-            renderChart(data, selectedCountry);
+            renderChart(selectedCountry);
         });
 
         // 按钮选择器
@@ -40,7 +41,8 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         showCurveBtn.on("click", () => {
             chartContainer.style("display", "block");
             mapContainer.style("display", "none");
-            renderChart(data, selectedCountry);
+            const selectedCountry = countrySelect.property("value");
+            renderChart(selectedCountry);
         });
 
         showMapBtn.on("click", () => {
@@ -49,14 +51,26 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             renderMap(data);
         });
 
+        // 提前创建 Tooltip 容器
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("position", "absolute")
+            .style("visibility", "hidden")
+            .style("background", "rgba(0,0,0,0.7)")
+            .style("color", "#fff")
+            .style("padding", "10px")
+            .style("border-radius", "5px")
+            .style("font-size", "12px");
+
         // 绘制曲线图函数
         function renderChart(country) {
-            const countryData = aggregatedData.find(d => d.country === country).data;
+            const countryData = data.filter(d => d["Country/Region"] === country);
 
             // 设置图表宽高
-            const width = 900; // 固定宽度
-            const height = 430; // 固定高度
-            const margin = { top: 0, right: 0, bottom: 0, left: 0 };
+            const width = 900;
+            const height = 500;
+            const margin = { top: 20, right: 30, bottom: 50, left: 60 };
 
             // 清空图表并初始化
             const svg = d3.select("#chart").html("").append("svg")
@@ -67,10 +81,10 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
 
             // 设置比例尺
             const x = d3.scaleTime()
-                .domain(d3.extent(countryData, d => d[0]))
+                .domain(d3.extent(countryData, d => d.Date))
                 .range([0, width]);
             const y = d3.scaleLinear()
-                .domain([0, d3.max(countryData, d => Math.max(d[1].Confirmed, d[1].Deaths, d[1].Recovered))])
+                .domain([0, d3.max(countryData, d => Math.max(d.Confirmed, d.Deaths, d.Recovered))])
                 .range([height, 0]);
 
             // 添加坐标轴
@@ -80,11 +94,6 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             svg.append("g").call(d3.axisLeft(y));
 
             // 绘制折线
-            const lineGenerator = key => d3.line()
-                .x(d => x(d[0]))
-                .y(d => y(d[1][key]))
-                .curve(d3.curveMonotoneX);
-
             const lines = [
                 { key: "Confirmed", color: "blue" },
                 { key: "Deaths", color: "red" },
@@ -92,53 +101,38 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             ];
 
             lines.forEach(({ key, color }) => {
+                const lineGenerator = d3.line()
+                    .x(d => x(d.Date))
+                    .y(d => y(d[key]));
+
                 // 绘制折线
                 svg.append("path")
                     .datum(countryData)
                     .attr("fill", "none")
                     .attr("stroke", color)
                     .attr("stroke-width", 2)
-                    .attr("d", lineGenerator(key));
+                    .attr("d", lineGenerator);
 
-                // 为每条折线添加悬停点
+                // 绘制悬停点
                 svg.selectAll(`.dot-${key}`)
                     .data(countryData)
                     .enter()
                     .append("circle")
-                    .attr("class", `dot-${key}`)
-                    .attr("cx", d => x(d[0]))
-                    .attr("cy", d => y(d[1][key]))
+                    .attr("cx", d => x(d.Date))
+                    .attr("cy", d => y(d[key]))
                     .attr("r", 4)
                     .attr("fill", color)
                     .on("mouseover", (event, d) => {
-                        d3.select(".tooltip")
-                            .style("visibility", "visible")
-                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d[0])}<br>${key}: ${d[1][key]}`);
+                        tooltip.style("visibility", "visible")
+                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>${key}: ${d[key]}`);
                     })
                     .on("mousemove", event => {
-                        d3.select(".tooltip")
-                            .style("top", `${event.pageY - 10}px`)
+                        tooltip.style("top", `${event.pageY - 10}px`)
                             .style("left", `${event.pageX + 10}px`);
                     })
                     .on("mouseout", () => {
-                        d3.select(".tooltip").style("visibility", "hidden");
+                        tooltip.style("visibility", "hidden");
                     });
-            });
-
-            // 添加 Tooltip 容器
-            d3.select("body").append("div").attr("class", "tooltip");
-
-            // 绘制图例
-            const legendContainer = d3.select("#legend-container").html("");
-            lines.forEach(({ key, color }) => {
-                const legendItem = legendContainer.append("div")
-                    .attr("class", "legend-item");
-
-                legendItem.append("span")
-                    .style("background-color", color)
-                    .style("display", "inline-block");
-
-                legendItem.append("span").text(key);
             });
         }
 
@@ -146,7 +140,6 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         function renderMap(data) {
             const geoJsonUrl = "https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson";
 
-            // 创建SVG画布
             const svg = d3.select("#map").html("").append("svg")
                 .attr("width", 900)
                 .attr("height", 500);
@@ -155,44 +148,31 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
             const path = d3.geoPath().projection(projection);
 
             d3.json(geoJsonUrl).then(world => {
-                svg.append("g")
-                    .selectAll("path")
-                    .data(world.features)
-                    .enter()
-                    .append("path")
-                    .attr("d", path)
-                    .attr("fill", "#ccc")
-                    .attr("stroke", "#333");
-
-                // 显示数据（仅显示最新日期的数据）
                 const latestDate = d3.max(data, d => d.Date);
                 const latestData = data.filter(d => d.Date.getTime() === latestDate.getTime());
                 const groupedData = d3.group(latestData, d => d["Country/Region"]);
 
                 svg.selectAll("path")
-                    .attr("fill", d => {
-                        const countryData = groupedData.get(d.properties.name);
-                        return countryData ? d3.interpolateReds(countryData[0].Confirmed / 1000000) : "#ccc";
-                    })
+                    .data(world.features)
+                    .enter()
+                    .append("path")
+                    .attr("d", path)
+                    .attr("fill", "#ccc")
+                    .attr("stroke", "#333")
                     .on("mouseover", (event, d) => {
                         const countryData = groupedData.get(d.properties.name);
                         if (countryData) {
-                            const tooltip = d3.select("body").append("div")
-                                .attr("class", "tooltip")
-                                .style("position", "absolute")
-                                .style("visibility", "visible")
-                                .style("background", "rgba(0,0,0,0.7)")
-                                .style("color", "#fff")
-                                .style("padding", "10px")
-                                .style("border-radius", "5px")
-                                .style("font-size", "12px");
-
-                            tooltip.html(`${d.properties.name}<br>Confirmed: ${countryData[0].Confirmed}<br>Deaths: ${countryData[0].Deaths}<br>Recovered: ${countryData[0].Recovered}`)
-                                .style("top", (event.pageY + 10) + "px")
-                                .style("left", (event.pageX + 10) + "px");
+                            tooltip.style("visibility", "visible")
+                                .html(`${d.properties.name}<br>Confirmed: ${countryData[0].Confirmed}<br>Deaths: ${countryData[0].Deaths}<br>Recovered: ${countryData[0].Recovered}`);
                         }
                     })
-                    .on("mouseout", () => d3.select(".tooltip").remove());
+                    .on("mousemove", event => {
+                        tooltip.style("top", `${event.pageY - 10}px`)
+                            .style("left", `${event.pageX + 10}px`);
+                    })
+                    .on("mouseout", () => {
+                        tooltip.style("visibility", "hidden");
+                    });
             });
         }
     })
