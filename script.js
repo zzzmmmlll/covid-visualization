@@ -37,17 +37,17 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         const chartContainer = d3.select("#chart-container");
         const mapContainer = d3.select("#map-container");
 
-        // 切换视图逻辑
+        // 切换视图逻辑（使用 visibility 和 opacity 替代 display）
         showCurveBtn.on("click", () => {
-            chartContainer.style("display", "block");
-            mapContainer.style("display", "none");
+            chartContainer.style("visibility", "visible").style("opacity", 1);
+            mapContainer.style("visibility", "hidden").style("opacity", 0);
             const selectedCountry = countrySelect.property("value");
             renderChart(selectedCountry);
         });
 
         showMapBtn.on("click", () => {
-            chartContainer.style("display", "none");
-            mapContainer.style("display", "block");
+            chartContainer.style("visibility", "hidden").style("opacity", 0);
+            mapContainer.style("visibility", "visible").style("opacity", 1);
             renderMap(data);
         });
 
