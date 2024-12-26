@@ -50,6 +50,7 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
         });
 
         // 绘制曲线图函数
+        // 绘制曲线图函数
         function renderChart(data, country) {
             // 筛选出选择国家的数据
             const countryData = data.filter(d => d["Country/Region"] === country);
@@ -115,7 +116,47 @@ d3.csv("https://raw.githubusercontent.com/zzzmmmlll/covid-visualization/refs/hea
                 .attr("stroke", "green")
                 .attr("stroke-width", 2)
                 .attr("d", lineRecovered);
+
+            // 添加 Tooltip 容器
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("position", "absolute")
+                .style("visibility", "hidden")
+                .style("background", "rgba(0,0,0,0.7)")
+                .style("color", "#fff")
+                .style("padding", "10px")
+                .style("border-radius", "5px")
+                .style("font-size", "12px");
+
+            // 添加数据点和悬停交互
+            const addDots = (dataKey, color) => {
+                svg.selectAll(`.dot-${dataKey}`)
+                    .data(countryData)
+                    .enter().append("circle")
+                    .attr("class", `dot-${dataKey}`)
+                    .attr("cx", d => x(d.Date))
+                    .attr("cy", d => y(d[dataKey]))
+                    .attr("r", 5)
+                    .attr("fill", color)
+                    .on("mouseover", (event, d) => {
+                        tooltip.style("visibility", "visible")
+                            .html(`Date: ${d3.timeFormat("%Y-%m-%d")(d.Date)}<br>${dataKey}: ${d[dataKey]}`);
+                    })
+                    .on("mousemove", event => {
+                        tooltip.style("top", `${event.pageY + 10}px`)
+                            .style("left", `${event.pageX + 10}px`);
+                    })
+                    .on("mouseout", () => {
+                        tooltip.style("visibility", "hidden");
+                    });
+            };
+
+            // 添加数据点
+            addDots("Confirmed", "blue");
+            addDots("Deaths", "red");
+            addDots("Recovered", "green");
         }
+
 
         // 绘制地图函数
         function renderMap(data) {
